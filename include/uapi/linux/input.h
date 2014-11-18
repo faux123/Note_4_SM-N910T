@@ -153,7 +153,15 @@ struct input_keymap_entry {
 
 #define EVIOCGRAB		_IOW('E', 0x90, int)			/* Grab/Release device */
 
+#define EVIOCGSUSPENDBLOCK	_IOR('E', 0x91, int)			/* get suspend block enable */
+#define EVIOCSSUSPENDBLOCK	_IOW('E', 0x91, int)			/* set suspend block enable */
+
 #define EVIOCSCLOCKID		_IOW('E', 0xa0, int)			/* Set clockid to be used for timestamps */
+
+#ifdef CONFIG_INPUT_EXPANDED_ABS
+#define EVIOCGABS_LIMIT		(0x40)
+#define EVIOCGABS_CHG_LIMIT(nr)	(nr + EVIOCGABS_LIMIT)
+#endif
 
 /*
  * Device properties and quirks
@@ -163,6 +171,7 @@ struct input_keymap_entry {
 #define INPUT_PROP_DIRECT		0x01	/* direct input devices */
 #define INPUT_PROP_BUTTONPAD		0x02	/* has button(s) under pad */
 #define INPUT_PROP_SEMI_MT		0x03	/* touch rectangle only */
+#define INPUT_PROP_NO_DUMMY_RELEASE	0x04	/* no dummy event */
 
 #define INPUT_PROP_MAX			0x1f
 #define INPUT_PROP_CNT			(INPUT_PROP_MAX + 1)
@@ -407,6 +416,9 @@ struct input_keymap_entry {
 #define KEY_F23			193
 #define KEY_F24			194
 
+#define KEY_VOICE_WAKEUP_LPSD	198	/* Samsung Voice Wakeup LPSD - Baby cry */
+#define KEY_VOICE_WAKEUP	199	/* Samsung Voice Wakeup */
+
 #define KEY_PLAYCD		200
 #define KEY_PAUSECD		201
 #define KEY_PROG3		202
@@ -466,6 +478,8 @@ struct input_keymap_entry {
 
 #define KEY_MICMUTE		248	/* Mute / unmute the microphone */
 
+#define KEY_RECENT   254
+
 /* Code 255 is reserved for special needs of AT keyboard driver */
 
 #define BTN_MISC		0x100
@@ -521,6 +535,7 @@ struct input_keymap_entry {
 #define BTN_MODE		0x13c
 #define BTN_THUMBL		0x13d
 #define BTN_THUMBR		0x13e
+#define BTN_GAME		0x13f	/* Add game button for samsung bluetooth keypad */
 
 #define BTN_DIGI		0x140
 #define BTN_TOOL_PEN		0x140
@@ -542,6 +557,10 @@ struct input_keymap_entry {
 #define BTN_WHEEL		0x150
 #define BTN_GEAR_DOWN		0x150
 #define BTN_GEAR_UP		0x151
+
+#define BTN_SUBSCREEN_FLAG	0x15D
+#define BTN_R_FLICK_FLAG	0x15E
+#define BTN_L_FLICK_FLAG	0x15F
 
 #define KEY_OK			0x160
 #define KEY_SELECT		0x161
@@ -641,6 +660,10 @@ struct input_keymap_entry {
 #define KEY_DEL_EOS		0x1c1
 #define KEY_INS_LINE		0x1c2
 #define KEY_DEL_LINE		0x1c3
+#define KEY_REAR_CAMERA_DETECTED	0x1c4	/* Rear Camera launch(MAIN CAM) @ SEC */
+#define KEY_FRONT_CAMERA_DETECTED	0x1c5	/* Front Camera launch(SUB CAM) @ SEC */
+#define KEY_SIDE_GESTURE			0x1c6
+#define KEY_BLACK_UI_GESTURE		0x1c7
 
 #define KEY_FN			0x1d0
 #define KEY_FN_ESC		0x1d1
@@ -688,6 +711,7 @@ struct input_keymap_entry {
 #define KEY_NUMERIC_STAR	0x20a
 #define KEY_NUMERIC_POUND	0x20b
 
+#define KEY_CAMERA_SNAPSHOT	0x2fe
 #define KEY_CAMERA_FOCUS	0x210
 #define KEY_WPS_BUTTON		0x211	/* WiFi Protected Setup key */
 
@@ -706,6 +730,9 @@ struct input_keymap_entry {
 #define KEY_ATTENDANT_OFF	0x21c
 #define KEY_ATTENDANT_TOGGLE	0x21d	/* Attendant call on or off */
 #define KEY_LIGHTS_TOGGLE	0x21e	/* Reading light on or off */
+
+#define KEY_PEN_PDCT		0x230 /* E-PEN PDCT flag*/
+
 
 #define BTN_TRIGGER_HAPPY		0x2c0
 #define BTN_TRIGGER_HAPPY1		0x2c0
@@ -748,6 +775,22 @@ struct input_keymap_entry {
 #define BTN_TRIGGER_HAPPY38		0x2e5
 #define BTN_TRIGGER_HAPPY39		0x2e6
 #define BTN_TRIGGER_HAPPY40		0x2e7
+
+/* SAMSUNG
+ * 0	 3
+ * 1	 4
+ * 2	 5
+ *
+ * CAMERA_DETECTED : support Quick Camera Access
+ */
+#define KEY_SIDE_TOUCH_0		0x2e8
+#define KEY_SIDE_TOUCH_1		0x2e9
+#define KEY_SIDE_TOUCH_2		0x2ea
+#define KEY_SIDE_TOUCH_3		0x2eb
+#define KEY_SIDE_TOUCH_4		0x2ec
+#define KEY_SIDE_TOUCH_5		0x2ed
+#define KEY_SIDE_TOUCH_6		0x2ee
+#define KEY_SIDE_TOUCH_7		0x2ef
 
 /* We avoid low common keys in module aliases so they don't get huge. */
 #define KEY_MIN_INTERESTING	KEY_MUTE
@@ -817,11 +860,20 @@ struct input_keymap_entry {
 #define ABS_MT_TRACKING_ID	0x39	/* Unique ID of initiated contact */
 #define ABS_MT_PRESSURE		0x3a	/* Pressure on contact area */
 #define ABS_MT_DISTANCE		0x3b	/* Contact hover distance */
-#define ABS_MT_TOOL_X		0x3c	/* Center X tool position */
-#define ABS_MT_TOOL_Y		0x3d	/* Center Y tool position */
+#define ABS_MT_TOOL_X		0x3c /* Center X tool position */
+#define ABS_MT_TOOL_Y		0x3d /* Center Y tool position */
+#define ABS_MT_ANGLE		0x3c	/* touch angle */
+#define ABS_MT_PALM		0x3d	/* palm touch */
+#define ABS_MT_COMPONENT	0x3e	/* touch component */
+#define ABS_MT_SUMSIZE		0x3f	/* touch sumsize */
 
-
+#ifdef CONFIG_INPUT_EXPANDED_ABS
+#define ABS_MT_GRIP		0x40
+#define ABS_MAX			0x4f
+#else
 #define ABS_MAX			0x3f
+#endif
+
 #define ABS_CNT			(ABS_MAX+1)
 
 /*
@@ -844,7 +896,20 @@ struct input_keymap_entry {
 #define SW_FRONT_PROXIMITY	0x0b  /* set = front proximity sensor active */
 #define SW_ROTATE_LOCK		0x0c  /* set = rotate locked/disabled */
 #define SW_LINEIN_INSERT	0x0d  /* set = inserted */
-#define SW_MAX			0x0f
+#define SW_HPHL_OVERCURRENT	0x0e  /* set = over current on left hph */
+#define SW_HPHR_OVERCURRENT	0x0f  /* set = over current on right hph */
+#define SW_UNSUPPORT_INSERT	0x10  /* set = unsupported device inserted */
+#define SW_MICROPHONE2_INSERT   0x11  /* set = inserted */
+#define SW_PEN_INSERT		0x13
+#define SW_STROBE_INSERT	0x14
+#define SW_FLIP			0x15  /* set = flip cover */
+#define SW_GLOVE		0x16  /* set = glove mode */
+#define SW_LEFT_HAND		0x17  /* set = left hand*/
+#define SW_RIGHT_HAND		0x18  /* set = right hand*/
+#define SW_BOTH_HAND		0x19  /* set = both hand*/
+#define SW_W1			0x1A  /* set = w1_slave */
+
+#define SW_MAX			0x20
 #define SW_CNT			(SW_MAX+1)
 
 /*

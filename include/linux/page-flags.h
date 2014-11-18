@@ -109,6 +109,10 @@ enum pageflags {
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	PG_compound_lock,
 #endif
+	PG_readahead,		/* page in a readahead window */
+#ifdef CONFIG_SDP
+	PG_sensitive,
+#endif
 	__NR_PAGEFLAGS,
 
 	/* Filesystems */
@@ -276,6 +280,24 @@ PAGEFLAG_FALSE(HWPoison)
 #endif
 
 u64 stable_page_flags(struct page *page);
+#ifdef CONFIG_SDP
+static inline int PageSensitive(struct page *page)
+{
+	int ret = test_bit(PG_sensitive, &(page)->flags);
+	if (ret)
+		smp_rmb();
+
+	return ret;
+}
+
+static inline void SetPageSensitive(struct page *page)
+{
+	smp_wmb();
+	__set_bit(PG_sensitive, &(page)->flags);
+}
+
+CLEARPAGEFLAG(Sensitive, sensitive)
+#endif
 
 static inline int PageUptodate(struct page *page)
 {

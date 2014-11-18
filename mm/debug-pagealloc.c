@@ -6,6 +6,14 @@
 #include <linux/poison.h>
 #include <linux/ratelimit.h>
 
+#ifndef mark_addr_rdonly
+#define mark_addr_rdonly(a)
+#endif
+
+#ifndef mark_addr_rdwrite
+#define mark_addr_rdwrite(a)
+#endif
+
 static inline void set_page_poison(struct page *page)
 {
 	__set_bit(PAGE_DEBUG_FLAG_POISON, &page->debug_flags);
@@ -27,6 +35,7 @@ static void poison_page(struct page *page)
 
 	set_page_poison(page);
 	memset(addr, PAGE_POISON, PAGE_SIZE);
+	mark_addr_rdonly(addr);
 	kunmap_atomic(addr);
 }
 
@@ -44,6 +53,10 @@ static bool single_bit_flip(unsigned char a, unsigned char b)
 
 	return error && !(error & (error - 1));
 }
+
+#ifdef CONFIG_BCMDHD_DEBUG_PAGEALLOC
+extern void dhd_page_corrupt_cb(void *addr_corrupt, size_t len);
+#endif /* CONFIG_BCMDHD_DEBUG_PAGEALLOC */
 
 static void check_poison_mem(unsigned char *mem, size_t bytes)
 {
@@ -67,9 +80,16 @@ static void check_poison_mem(unsigned char *mem, size_t bytes)
 	else
 		printk(KERN_ERR "pagealloc: memory corruption\n");
 
+#ifdef CONFIG_BCMDHD_DEBUG_PAGEALLOC
+		dhd_page_corrupt_cb(start, end - start + 1);
+#endif /* CONFIG_BCMDHD_DEBUG_PAGEALLOC */
+
 	print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 16, 1, start,
 			end - start + 1, 1);
+#ifndef CONFIG_BCMDHD_DEBUG_PAGEALLOC
+	BUG_ON(PANIC_CORRUPTION);
 	dump_stack();
+#endif /* !CONFIG_BCMDHD_DEBUG_PAGEALLOC */
 }
 
 static void unpoison_page(struct page *page)
@@ -81,6 +101,7 @@ static void unpoison_page(struct page *page)
 
 	addr = kmap_atomic(page);
 	check_poison_mem(addr, PAGE_SIZE);
+	mark_addr_rdwrite(addr);
 	clear_page_poison(page);
 	kunmap_atomic(addr);
 }
